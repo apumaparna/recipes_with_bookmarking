@@ -31,6 +31,40 @@ class _RecipeListState extends State<RecipeList> {
   // and keep track of the current search.
   List<String> previousSearches = <String>[];
 
+  // Here, you use the async keyword to indicate that this
+  // method will run asynchronously. It also:
+  // 1. Uses the await keyword to wait for an instance of SharedPreferences.
+  // 2. Saves the list of previous searches using the prefSearchKey key.
+  void savePreviousSearches() async {
+    // 1
+    final prefs = await SharedPreferences.getInstance();
+    // 2
+    prefs.setStringList(prefSearchKey, previousSearches);
+  }
+
+  //This method is also asynchronous. Here, you:
+  //1. Use the await keyword to wait for an instance of SharedPreferences.
+  //2. Check if a preference for your saved list already exists.
+  //3. Get the list of previous searches.
+  //4. If the list is not null, set the previous searches, otherwise initialize an empty list.
+
+  void getPreviousSearches() async {
+    // 1
+    // SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    // 2
+    if (prefs.containsKey(prefSearchKey)) {
+      // 3
+      final searches = prefs.getStringList(prefSearchKey);
+      // 4
+      if (searches != null) {
+        previousSearches = searches;
+      } else {
+        previousSearches = <String>[];
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -63,40 +97,6 @@ class _RecipeListState extends State<RecipeList> {
   void dispose() {
     searchTextController.dispose();
     super.dispose();
-  }
-
-  // Here, you use the async keyword to indicate that this
-  // method will run asynchronously. It also:
-  // 1. Uses the await keyword to wait for an instance of SharedPreferences.
-  // 2. Saves the list of previous searches using the prefSearchKey key.
-  void savePreviousSearches() async {
-    // 1
-    final prefs = await SharedPreferences.getInstance();
-    // 2
-    prefs.setStringList(prefSearchKey, previousSearches);
-  }
-
-  //This method is also asynchronous. Here, you:
-  //1. Use the await keyword to wait for an instance of SharedPreferences.
-  //2. Check if a preference for your saved list already exists.
-  //3. Get the list of previous searches.
-  //4. If the list is not null, set the previous searches, otherwise initialize an empty list.
-
-  void getPreviousSearches() async {
-    // 1
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    // 2
-    if (prefs.containsKey(prefSearchKey)) {
-      // 3
-      final searches = prefs.getStringList(prefSearchKey);
-      // 4
-      if (searches != null) {
-        previousSearches = searches;
-      } else {
-        previousSearches = <String>[];
-      }
-    }
   }
 
   @override
