@@ -4,6 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/custom_dropdown.dart';
 import '../colors.dart';
+import 'dart:convert';
+import '../../network/recipe_model.dart';
+import 'package:flutter/services.dart';
+import '../recipe_card.dart';
+import 'recipe_details.dart';
 
 class RecipeList extends StatefulWidget {
   const RecipeList({Key? key}) : super(key: key);
@@ -30,6 +35,8 @@ class _RecipeListState extends State<RecipeList> {
   // This clears the way for you to save the user’s previous searches
   // and keep track of the current search.
   List<String> previousSearches = <String>[];
+  // Add _currentRecipes1
+  APIRecipeQuery? _currentRecipes1 = null;
 
   // Here, you use the async keyword to indicate that this
   // method will run asynchronously. It also:
@@ -68,7 +75,7 @@ class _RecipeListState extends State<RecipeList> {
   @override
   void initState() {
     super.initState();
-
+    loadRecipes();
     //loads any previous searches when the user restarts the app
     getPreviousSearches();
 
@@ -90,6 +97,22 @@ class _RecipeListState extends State<RecipeList> {
           });
         }
       }
+    });
+  }
+
+  // Add loadRecipes
+  // 1. Loads recipes1.json from the assets directory. rootBundle is the
+  //    top-level property that holds references to all the items in the
+  //    asset folder. This loads the file as a string.
+  // 2. Uses the built-in jsonDecode() method to convert the string to a map,
+  //    then uses fromJson(), which was generated for you, to make an
+  //    instance of an APIRecipeQuery.
+  Future loadRecipes() async {
+    // 1
+    final jsonString = await rootBundle.loadString('assets/recipes1.json');
+    setState(() {
+      // 2
+      _currentRecipes1 = APIRecipeQuery.fromJson(jsonDecode(jsonString));
     });
   }
 
@@ -238,13 +261,37 @@ class _RecipeListState extends State<RecipeList> {
     });
   }
 
+  // 1. Checks to see if the list of recipes is null.
+  // 2. If not, calls _buildRecipeCard() using the first item in the list.
   Widget _buildRecipeLoader(BuildContext context) {
-    if (searchTextController.text.length < 3) {
+    // 1
+    if (_currentRecipes1 == null || _currentRecipes1?.hits == null) {
       return Container();
     }
-    // Show a loading indicator while waiting for the movies
-    return const Center(
-      child: CircularProgressIndicator(),
+    // Show a loading indicator while waiting for the recipes
+    return Center(
+      // 2
+      child: _buildRecipeCard(context, _currentRecipes1!.hits, 0),
     );
   }
+}
+
+// 1. Finds the recipe at the given index.
+// 2. Calls recipeStringCard(), which shows a nice card below the search field.
+
+Widget _buildRecipeCard(
+    BuildContext topLevelContext, List<APIHits> hits, int index) {
+  // 1
+  final recipe = hits[index].recipe;
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(topLevelContext, MaterialPageRoute(
+        builder: (context) {
+          return const RecipeDetails();
+        },
+      ));
+    },
+    // 2
+    child: recipeStringCard(recipe.image, recipe.label),
+  );
 }
