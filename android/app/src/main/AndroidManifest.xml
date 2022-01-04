@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.recipes_with_bookmarking">
+    <uses-permission android:name="android.permission.INTERNET"/>
    <application
         android:label="recipes_with_bookmarking"
         android:name="${applicationName}"

@@ -9,6 +9,7 @@ import '../../network/recipe_model.dart';
 import 'package:flutter/services.dart';
 import '../recipe_card.dart';
 import 'recipe_details.dart';
+import '../../network/recipe_service.dart';
 
 class RecipeList extends StatefulWidget {
   const RecipeList({Key? key}) : super(key: key);
@@ -24,7 +25,9 @@ class _RecipeListState extends State<RecipeList> {
 
   late TextEditingController searchTextController;
   final ScrollController _scrollController = ScrollController();
-  List currentSearchList = [];
+
+  List<APIHits> currentSearchList = [];
+
   int currentCount = 0;
   int currentStartPosition = 0;
   int currentEndPosition = 20;
@@ -36,7 +39,7 @@ class _RecipeListState extends State<RecipeList> {
   // and keep track of the current search.
   List<String> previousSearches = <String>[];
   // Add _currentRecipes1
-  APIRecipeQuery? _currentRecipes1 = null;
+  // APIRecipeQuery? _currentRecipes1 = null;
 
   // Here, you use the async keyword to indicate that this
   // method will run asynchronously. It also:
@@ -75,7 +78,7 @@ class _RecipeListState extends State<RecipeList> {
   @override
   void initState() {
     super.initState();
-    loadRecipes();
+    // loadRecipes();
     //loads any previous searches when the user restarts the app
     getPreviousSearches();
 
@@ -100,6 +103,22 @@ class _RecipeListState extends State<RecipeList> {
     });
   }
 
+  // 1: The method is asynchronous and returns a Future.
+  // It takes a query and the start and the end positions of the recipe data,
+  // which from and to represent, respectively.
+  Future<APIRecipeQuery> getRecipeData(String query, int from, int to) async {
+    // 2: You define recipeJson, which stores the results from
+    // RecipeService().getRecipes() after it finishes.
+    // It uses the from and to fields from step 1.
+    final recipeJson = await RecipeService().getRecipes(query, from, to);
+    // 3: The variable recipeMap uses Dart’s json.decode() to decode the
+    // string into a map of type Map<String, dynamic>.
+    final recipeMap = json.decode(recipeJson);
+    // 4: You use the JSON parsing method you created in the previous
+    // chapter to create an APIRecipeQuery model.
+    return APIRecipeQuery.fromJson(recipeMap);
+  }
+
   // Add loadRecipes
   // 1. Loads recipes1.json from the assets directory. rootBundle is the
   //    top-level property that holds references to all the items in the
@@ -107,14 +126,14 @@ class _RecipeListState extends State<RecipeList> {
   // 2. Uses the built-in jsonDecode() method to convert the string to a map,
   //    then uses fromJson(), which was generated for you, to make an
   //    instance of an APIRecipeQuery.
-  Future loadRecipes() async {
-    // 1
-    final jsonString = await rootBundle.loadString('assets/recipes1.json');
-    setState(() {
-      // 2
-      _currentRecipes1 = APIRecipeQuery.fromJson(jsonDecode(jsonString));
-    });
-  }
+  // Future loadRecipes() async {
+  //   // 1
+  //   final jsonString = await rootBundle.loadString('assets/recipes1.json');
+  //   setState(() {
+  //     // 2
+  //     _currentRecipes1 = APIRecipeQuery.fromJson(jsonDecode(jsonString));
+  //   });
+  // }
 
   @override
   void dispose() {
@@ -261,37 +280,134 @@ class _RecipeListState extends State<RecipeList> {
     });
   }
 
-  // 1. Checks to see if the list of recipes is null.
-  // 2. If not, calls _buildRecipeCard() using the first item in the list.
+  // // 1. Checks to see if the list of recipes is null.
+  // // 2. If not, calls _buildRecipeCard() using the first item in the list.
+  // Widget _buildRecipeLoader(BuildContext context) {
+  //   // 1
+  //   if (_currentRecipes1 == null || _currentRecipes1?.hits == null) {
+  //     return Container();
+  //   }
+  //   // Show a loading indicator while waiting for the recipes
+  //   return Center(
+  //     // 2
+  //     child: _buildRecipeCard(context, _currentRecipes1!.hits, 0),
+  //   );
+  // }
+
   Widget _buildRecipeLoader(BuildContext context) {
-    // 1
-    if (_currentRecipes1 == null || _currentRecipes1?.hits == null) {
+    // 1: You check there are at least three characters in the search term.
+    // You can change this value, but you probably won’t get good results
+    // with only one or two characters.
+    if (searchTextController.text.length < 3) {
       return Container();
     }
-    // Show a loading indicator while waiting for the recipes
-    return Center(
-      // 2
-      child: _buildRecipeCard(context, _currentRecipes1!.hits, 0),
+    // 2: FutureBuilder determines the current state of the Future that
+    // APIRecipeQuery returns. It then builds a widget that displays
+    // asynchronous data while it’s loading.
+    return FutureBuilder<APIRecipeQuery>(
+      // 3: You assign the Future that getRecipeData returns to future.
+      future: getRecipeData(searchTextController.text.trim(),
+          currentStartPosition, currentEndPosition),
+      // 4: builder is required; it returns a widget.
+      builder: (context, snapshot) {
+        // 5: You check the connectionState. If the state is done,
+        // you can update the UI with the results or an error.
+        if (snapshot.connectionState == ConnectionState.done) {
+          // 6: If there’s an error, return a simple Text
+          // element that displays the error message.
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(snapshot.error.toString(),
+                  textAlign: TextAlign.center, textScaleFactor: 1.3),
+            );
+          }
+
+          // 7: If there’s no error, process the query results
+          // and add query.hits to currentSearchList.
+          loading = false;
+          final query = snapshot.data;
+          inErrorState = false;
+          if (query != null) {
+            currentCount = query.count;
+            hasMore = query.more;
+            currentSearchList.addAll(query.hits);
+            // 8: If you aren’t at the end of the data,
+            // set currentEndPosition to the current location.
+            if (query.to < currentEndPosition) {
+              currentEndPosition = query.to;
+            }
+          }
+          // 9: Return _buildRecipeList() using currentSearchList.
+          return _buildRecipeList(context, currentSearchList);
+        }
+        // 10: You check that snapshot.connectionState isn’t done.
+        else {
+          // 11: If the current count is 0, show a progress indicator.
+          if (currentCount == 0) {
+            // Show a loading indicator while waiting for the recipes
+            return const Center(child: CircularProgressIndicator());
+          } else {
+            // 12: Otherwise, just show the current list.
+            return _buildRecipeList(context, currentSearchList);
+          }
+        }
+      },
     );
   }
-}
 
-// 1. Finds the recipe at the given index.
-// 2. Calls recipeStringCard(), which shows a nice card below the search field.
-
-Widget _buildRecipeCard(
-    BuildContext topLevelContext, List<APIHits> hits, int index) {
-  // 1
-  final recipe = hits[index].recipe;
-  return GestureDetector(
-    onTap: () {
-      Navigator.push(topLevelContext, MaterialPageRoute(
-        builder: (context) {
-          return const RecipeDetails();
+  // 1: This method returns a widget and takes recipeListContext and a list of recipe hits.
+  Widget _buildRecipeList(BuildContext recipeListContext, List<APIHits> hits) {
+    // 2: You use MediaQuery to get the device’s screen size.
+    // You then set a fixed item height and create two columns of cards
+    // whose width is half the device’s width.
+    final size = MediaQuery.of(context).size;
+    const itemHeight = 310;
+    final itemWidth = size.width / 2;
+    // 3: You return a widget that’s flexible in width and height.
+    return Flexible(
+      // 4: GridView is similar to ListView, but it allows for some interesting
+      // combinations of rows and columns. In this case, you use
+      // GridView.builder() because you know the number of items
+      // and you’ll use an itemBuilder.
+      child: GridView.builder(
+        // 5: You use _scrollController, created in initState(), to detect
+        // when scrolling gets to about 70% from the bottom.
+        controller: _scrollController,
+        // 6: The SliverGridDelegateWithFixedCrossAxisCount delegate
+        // has two columns and sets the aspect ratio.
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: (itemWidth / itemHeight),
+        ),
+        // 7: The length of your grid items depends on the
+        // number of items in the hits list.
+        itemCount: hits.length,
+        // 8: itemBuilder now uses _buildRecipeCard() to return a card for
+        // each recipe. _buildRecipeCard() retrieves the recipe from the hits
+        // list by using hits[index].recipe.
+        itemBuilder: (BuildContext context, int index) {
+          return _buildRecipeCard(recipeListContext, hits, index);
         },
-      ));
-    },
-    // 2
-    child: recipeStringCard(recipe.image, recipe.label),
-  );
+      ),
+    );
+  }
+
+  // 1. Finds the recipe at the given index.
+  // 2. Calls recipeStringCard(), which shows a nice card below the search field.
+  Widget _buildRecipeCard(
+      BuildContext topLevelContext, List<APIHits> hits, int index) {
+    // 1
+    final recipe = hits[index].recipe;
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(topLevelContext, MaterialPageRoute(
+          builder: (context) {
+            return const RecipeDetails();
+          },
+        ));
+      },
+      // 2
+      child: recipeCard(recipe),
+    );
+  }
 }
