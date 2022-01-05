@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/custom_dropdown.dart';
 import '../colors.dart';
-import 'dart:convert';
 import '../../network/recipe_model.dart';
 import 'package:flutter/services.dart';
 import '../recipe_card.dart';
 import 'recipe_details.dart';
 import '../../network/recipe_service.dart';
+import 'package:chopper/chopper.dart';
+import '../../network/model_response.dart';
+import 'dart:collection';
 
 class RecipeList extends StatefulWidget {
   const RecipeList({Key? key}) : super(key: key);
@@ -103,21 +105,22 @@ class _RecipeListState extends State<RecipeList> {
     });
   }
 
-  // 1: The method is asynchronous and returns a Future.
-  // It takes a query and the start and the end positions of the recipe data,
-  // which from and to represent, respectively.
-  Future<APIRecipeQuery> getRecipeData(String query, int from, int to) async {
-    // 2: You define recipeJson, which stores the results from
-    // RecipeService().getRecipes() after it finishes.
-    // It uses the from and to fields from step 1.
-    final recipeJson = await RecipeService().getRecipes(query, from, to);
-    // 3: The variable recipeMap uses Dart’s json.decode() to decode the
-    // string into a map of type Map<String, dynamic>.
-    final recipeMap = json.decode(recipeJson);
-    // 4: You use the JSON parsing method you created in the previous
-    // chapter to create an APIRecipeQuery model.
-    return APIRecipeQuery.fromJson(recipeMap);
-  }
+  // COMMENTED OUT WITH THE CHOPPER UPDATE
+  // // 1: The method is asynchronous and returns a Future.
+  // // It takes a query and the start and the end positions of the recipe data,
+  // // which from and to represent, respectively.
+  // Future<APIRecipeQuery> getRecipeData(String query, int from, int to) async {
+  //   // 2: You define recipeJson, which stores the results from
+  //   // RecipeService().getRecipes() after it finishes.
+  //   // It uses the from and to fields from step 1.
+  //   final recipeJson = await RecipeService().getRecipes(query, from, to);
+  //   // 3: The variable recipeMap uses Dart’s json.decode() to decode the
+  //   // string into a map of type Map<String, dynamic>.
+  //   final recipeMap = json.decode(recipeJson);
+  //   // 4: You use the JSON parsing method you created in the previous
+  //   // chapter to create an APIRecipeQuery model.
+  //   return APIRecipeQuery.fromJson(recipeMap);
+  // }
 
   // Add loadRecipes
   // 1. Loads recipes1.json from the assets directory. rootBundle is the
@@ -304,10 +307,17 @@ class _RecipeListState extends State<RecipeList> {
     // 2: FutureBuilder determines the current state of the Future that
     // APIRecipeQuery returns. It then builds a widget that displays
     // asynchronous data while it’s loading.
-    return FutureBuilder<APIRecipeQuery>(
+
+    // return FutureBuilder<APIRecipeQuery>(
+    return FutureBuilder<Response<Result<APIRecipeQuery>>>(
       // 3: You assign the Future that getRecipeData returns to future.
-      future: getRecipeData(searchTextController.text.trim(),
-          currentStartPosition, currentEndPosition),
+      // future: getRecipeData(searchTextController.text.trim(),
+      //     currentStartPosition, currentEndPosition),
+      future: RecipeService.create().queryRecipes(
+          searchTextController.text.trim(),
+          currentStartPosition,
+          currentEndPosition),
+
       // 4: builder is required; it returns a widget.
       builder: (context, snapshot) {
         // 5: You check the connectionState. If the state is done,
@@ -325,7 +335,41 @@ class _RecipeListState extends State<RecipeList> {
           // 7: If there’s no error, process the query results
           // and add query.hits to currentSearchList.
           loading = false;
-          final query = snapshot.data;
+          // final query = snapshot.data;
+
+          // 1: Check to see if the call was successful.
+          if (false == snapshot.data?.isSuccessful) {
+            var errorMessage = 'Problems getting data';
+            // 2: Check for an error map and extract the message to show.
+            if (snapshot.data?.error != null &&
+                snapshot.data?.error is LinkedHashMap) {
+              final map = snapshot.data?.error as LinkedHashMap;
+              errorMessage = map['message'];
+            }
+            return Center(
+              child: Text(
+                errorMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 18.0),
+              ),
+            );
+          }
+
+          // 3: snapshot.data is now a Response and not a string anymore.
+          // The body field is either the Success or Error that you defined
+          // above. Extract the value of body into result.
+          final result = snapshot.data?.body;
+          if (result == null || result is Error) {
+            // Hit an error:
+            // 4: If result is an error, return the current list of recipes.
+            inErrorState = true;
+            return _buildRecipeList(context, currentSearchList);
+          }
+
+          // 5: Since result passed the error check, cast it as Success and
+          // extract its value into query.
+          final query = (result as Success).value;
+
           inErrorState = false;
           if (query != null) {
             currentCount = query.count;

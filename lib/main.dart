@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart' as DotEnv;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:logging/logging.dart';
 
 import 'ui/main_screen.dart';
 
 Future<void> main() async {
+  await dotenv.load(fileName: ".env");
+  _setupLogging();
   WidgetsFlutterBinding.ensureInitialized();
-  await DotEnv.load(fileName: ".env");
   runApp(const MyApp());
+}
+
+// initializes the logging package and allows Chopper to log requests and responses.
+// Set the level to Level.ALL so that you see every log statement.
+void _setupLogging() {
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((rec) {
+    print('${rec.level.name}: ${rec.time}: ${rec.message}');
+  });
 }
 
 class MyApp extends StatelessWidget {
