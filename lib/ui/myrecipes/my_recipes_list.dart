@@ -39,7 +39,7 @@ class _MyRecipesListState extends State<MyRecipesList> {
             child: Slidable(
               startActionPane: ActionPane(
                 extentRatio: 0.25,
-                motion: DrawerMotion(),
+                motion: const DrawerMotion(),
                 children: [
                   SlidableAction(
                     label: 'Delete',
