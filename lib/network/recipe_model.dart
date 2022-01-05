@@ -1,4 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:recipes_with_bookmarking/data/models/ingredients.dart';
+import '../data/models/models.dart';
 
 part 'recipe_model.g.dart';
 
@@ -125,4 +127,16 @@ class APIIngredients {
   factory APIIngredients.fromJson(Map<String, dynamic> json) =>
       _$APIIngredientsFromJson(json);
   Map<String, dynamic> toJson() => _$APIIngredientsToJson(this);
+}
+
+List<Ingredient> convertIngredients(List<APIIngredients> apiIngredients) {
+  // Create a new list of ingredients to return.
+  final ingredients = <Ingredient>[];
+  // Convert each APIIngredients into an instance of Ingredient and
+  // add it to the list.
+  apiIngredients.forEach((ingredient) {
+    ingredients
+        .add(Ingredient(name: ingredient.name, weight: ingredient.weight));
+  });
+  return ingredients;
 }
