@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 // import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logging/logging.dart';
+import 'package:provider/provider.dart';
+import 'data/memory_repository.dart';
 
 import 'ui/main_screen.dart';
 
@@ -24,19 +26,28 @@ void _setupLogging() {
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Recipes',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.light,
-        primaryColor: Colors.white,
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+    // Use the ChangeNotifierProvider that has the type MemoryRepository.
+    return ChangeNotifierProvider<MemoryRepository>(
+      // Set lazy to false, which creates the repository right away instead of
+      // waiting until you need it. This is useful when the repository has to
+      // do some background work to start up.
+      lazy: false,
+      // Create your repository.
+      create: (_) => MemoryRepository(),
+      // Return MaterialApp as the child widget.
+      child: MaterialApp(
+        title: 'Recipes',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          brightness: Brightness.light,
+          primaryColor: Colors.white,
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: const MainScreen(),
       ),
-      home: const MainScreen(),
     );
   }
 }
