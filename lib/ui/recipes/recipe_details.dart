@@ -18,6 +18,10 @@ class RecipeDetails extends StatelessWidget {
     // You’ll use it to add the bookmark
     final repository = Provider.of<MemoryRepository>(context);
     final size = MediaQuery.of(context).size;
+
+    // print("happy");
+    // print(recipe.id);
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(

@@ -43,7 +43,6 @@ class _MyRecipesListState extends State<MyRecipesList> {
                       foregroundColor: Colors.white,
                       backgroundColor: Colors.red,
                       icon: Icons.delete,
-                      //const Icon(Icons.delete, color: Colors.red),
                       onPressed: (context) => deleteRecipe(repository, recipe),
                     ),
                   ],
@@ -76,6 +75,7 @@ class _MyRecipesListState extends State<MyRecipesList> {
   }
 
   void deleteRecipe(MemoryRepository repository, Recipe recipe) async {
+    print(recipe.url);
     if (recipe.id != null) {
       // The repository to delete any recipe ingredients.
       repository.deleteRecipeIngredients(recipe.id!);
